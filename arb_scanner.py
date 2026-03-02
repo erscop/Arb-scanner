@@ -34,31 +34,21 @@ def get_kalshi_markets():
     try:
         r = requests.get(
             "https://api.elections.kalshi.com/trade-api/v2/markets",
-            params={"status": "open", "limit": 5},
+            params={"status": "open", "limit": 200},
             headers={"accept": "application/json"},
             timeout=10
         )
-        raw = r.json()
-        markets = raw.get("markets", [])
-        print(f"  [DEBUG] Kalshi status code: {r.status_code}")
-        print(f"  [DEBUG] Kalshi top-level keys: {list(raw.keys())}")
-        print(f"  [DEBUG] Numero mercati raw: {len(markets)}")
-        if markets:
-            print(f"  [DEBUG] Primo mercato keys: {list(markets[0].keys())}")
-            print(f"  [DEBUG] Primo mercato: {markets[0]}")
-
         result = []
-        for m in markets:
-            yes_price = m.get("yes_price")
-            volume    = m.get("volume", 0)
-            if yes_price and volume >= MIN_LIQUIDITY:
-                yes = yes_price / 100
-                no  = (100 - yes_price) / 100
+        for m in r.json().get("markets", []):
+            yes_ask  = m.get("yes_ask")    # prezzo ask YES in centesimi (0-100)
+            no_ask   = m.get("no_ask")     # prezzo ask NO in centesimi (0-100)
+            liquidity = m.get("liquidity", 0)
+            if yes_ask and no_ask and liquidity >= MIN_LIQUIDITY:
                 result.append({
                     "title":     m.get("title", ""),
-                    "yes":       yes,
-                    "no":        no,
-                    "liquidity": volume,
+                    "yes":       yes_ask / 100,
+                    "no":        no_ask  / 100,
+                    "liquidity": liquidity,
                     "url":       f"https://kalshi.com/markets/{m.get('ticker', '')}"
                 })
         return result
