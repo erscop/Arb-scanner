@@ -32,17 +32,30 @@ def get_polymarket_markets():
 
 def get_kalshi_markets():
     try:
-        r = requests.get("https://trading-api.kalshi.com/trade-api/v2/markets",
-                         params={"status": "open", "limit": 200},
-                         headers={"accept": "application/json"}, timeout=10)
+        r = requests.get(
+            "https://api.elections.kalshi.com/trade-api/v2/markets",  # ← URL corretto
+            params={"status": "open", "limit": 200},
+            headers={"accept": "application/json"},
+            timeout=10
+        )
         result = []
         for m in r.json().get("markets", []):
-            yes, no = m.get("yes_ask"), m.get("no_ask")
-            if yes and no and m.get("volume", 0) >= MIN_LIQUIDITY:
-                result.append({"title": m.get("title", ""),
-                               "yes": yes/100, "no": no/100,
-                               "liquidity": m.get("volume", 0),
-                               "url": f"https://kalshi.com/markets/{m.get('ticker','')}"})
+            yes = m.get("yes_bid")    # ← campo corretto
+            no  = m.get("no_bid")     # ← campo corretto
+            if not yes:               # fallback se bid non disponibile
+                yes_price = m.get("yes_price")
+                if yes_price:
+                    yes = yes_price
+                    no  = 100 - yes_price
+            volume = m.get("volume", 0)
+            if yes and no and volume >= MIN_LIQUIDITY:
+                result.append({
+                    "title":     m.get("title", ""),
+                    "yes":       yes / 100,
+                    "no":        no  / 100,
+                    "liquidity": volume,
+                    "url":       f"https://kalshi.com/markets/{m.get('ticker', '')}"
+                })
         return result
     except Exception as e:
         print(f"[Kalshi ERROR] {e}")
