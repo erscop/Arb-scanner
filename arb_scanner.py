@@ -102,5 +102,3 @@ if __name__ == "__main__":
     else:
         print("  → Nessuna opportunita sopra soglia.")
 
-    # TEST — rimuovi questa riga dopo aver ricevuto la notifica su iPhone
-    send_ntfy("Test Scanner", f"Scanner attivo - {datetime.utcnow().strftime('%H:%M')} UTC")
