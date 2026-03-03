@@ -2,9 +2,7 @@ import requests, json, os
 from difflib import SequenceMatcher
 from datetime import datetime
 
-
-
-NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "arb_erscop_83041")
+NTFY_TOPIC      = os.environ.get("NTFY_TOPIC", "arb_erscop_83041")
 MIN_EDGE        = 0.04
 POLY_FEE        = 0.02
 KALSHI_FEE      = 0.02
@@ -60,32 +58,31 @@ def find_arb(poly_list, kalshi_list):
             seen.add(key)
             for label, cost, sA, sB in [
                 ("YES Poly + NO Kalshi", p["yes"] + k["no"],
-                 f"BUY YES @ {p['yes']:.2f} Polymarket", f"BUY NO  @ {k['no']:.2f} Kalshi"),
+                 f"BUY YES @ {p['yes']:.2f} Polymarket", f"BUY NO @ {k['no']:.2f} Kalshi"),
                 ("NO Poly + YES Kalshi", p["no"] + k["yes"],
-                 f"BUY NO  @ {p['no']:.2f} Polymarket",  f"BUY YES @ {k['yes']:.2f} Kalshi"),
+                 f"BUY NO @ {p['no']:.2f} Polymarket",   f"BUY YES @ {k['yes']:.2f} Kalshi"),
             ]:
                 edge = (1 - cost) - net_fee
                 if edge > MIN_EDGE:
                     found.append({"label": label, "edge": round(edge*100, 2),
-                                  "cost": round(cost, 4),
-                                  "profit": round(1 - cost, 4),
+                                  "cost": round(cost, 4), "profit": round(1 - cost, 4),
                                   "sA": sA, "sB": sB,
                                   "poly_title": p["title"][:55],
                                   "kalshi_title": k["title"][:55],
                                   "poly_url": p["url"], "kalshi_url": k["url"]})
     return found
 
-def send_ntfy(arbs):
-    for a in arbs:
-        msg = (f"📊 {a['sA']}\n📊 {a['sB']}\n"
-               f"💰 Costo: ${a['cost']} → Profitto: ${a['profit']} per $1\n"
-               f"🟣 {a['poly_title']}\n🔵 {a['kalshi_title']}\n"
-               f"🔗 {a['poly_url']}\n🔗 {a['kalshi_url']}")
-        requests.post(f"https://ntfy.sh/{NTFY_TOPIC}",
-                      data=msg.encode("utf-8"),
-                      headers={"Title": f"🚨 ARB +{a['edge']}% | {a['label']}",
-                               "Priority": "urgent", "Tags": "money_with_wings"})
-        print(f"  ✅ Alert: {a['label']} | Edge: {a['edge']}%")
+def send_ntfy(title, message, priority="default"):
+    try:
+        r = requests.post(
+            f"https://ntfy.sh/{NTFY_TOPIC}",
+            data=message.encode("utf-8"),
+            headers={"Title": title, "Priority": priority},
+            timeout=10
+        )
+        print(f"  → ntfy status: {r.status_code} | topic: {NTFY_TOPIC}")
+    except Exception as e:
+        print(f"  [ntfy ERROR] {e}")
 
 if __name__ == "__main__":
     print(f"[{datetime.utcnow().strftime('%H:%M:%S')} UTC] Scansione in corso...")
@@ -94,14 +91,16 @@ if __name__ == "__main__":
     print(f"  → Polymarket: {len(poly)} mercati | Kalshi: {len(kalshi)} mercati")
     arbs = find_arb(poly, kalshi)
     print(f"  → Arbitraggi trovati: {len(arbs)}")
+
     if arbs:
-        send_ntfy(arbs)
+        for a in arbs:
+            msg = (f"{a['sA']}\n{a['sB']}\n"
+                   f"Costo: ${a['cost']} - Profitto: ${a['profit']} per $1\n"
+                   f"Poly: {a['poly_title']}\nKalshi: {a['kalshi_title']}\n"
+                   f"{a['poly_url']}\n{a['kalshi_url']}")
+            send_ntfy(f"ARB +{a['edge']}% | {a['label']}", msg, priority="urgent")
     else:
-        print("  → Nessuna opportunità sopra soglia.")
-    
-    # TEST NOTIFICA — rimuovi dopo conferma
-    requests.post(f"https://ntfy.sh/{NTFY_TOPIC}",
-                  data=b"Test: scanner attivo, ntfy funziona!",
-                  headers={"Title": "✅ Test Scanner",
-                           "Priority": "default"})
-    print(f"  → Test notifica inviata a topic: {NTFY_TOPIC}")
+        print("  → Nessuna opportunita sopra soglia.")
+
+    # TEST — rimuovi questa riga dopo aver ricevuto la notifica su iPhone
+    send_ntfy("Test Scanner", f"Scanner attivo - {datetime.utcnow().strftime('%H:%M')} UTC")
