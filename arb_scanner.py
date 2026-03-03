@@ -94,5 +94,14 @@ if __name__ == "__main__":
     print(f"  → Polymarket: {len(poly)} mercati | Kalshi: {len(kalshi)} mercati")
     arbs = find_arb(poly, kalshi)
     print(f"  → Arbitraggi trovati: {len(arbs)}")
-    if arbs: send_ntfy(arbs)
-    else: print("  → Nessuna opportunità sopra soglia.")
+    if arbs:
+        send_ntfy(arbs)
+    else:
+        print("  → Nessuna opportunità sopra soglia.")
+    
+    # TEST NOTIFICA — rimuovi dopo conferma
+    requests.post(f"https://ntfy.sh/{NTFY_TOPIC}",
+                  data=b"Test: scanner attivo, ntfy funziona!",
+                  headers={"Title": "✅ Test Scanner",
+                           "Priority": "default"})
+    print(f"  → Test notifica inviata a topic: {NTFY_TOPIC}")
