@@ -2,7 +2,7 @@ import requests, json, os
 from difflib import SequenceMatcher
 from datetime import datetime
 
-NTFY_TOPIC      = os.environ.get("NTFY_TOPIC", "arb_erscop_83041")
+NTFY_TOPIC      = os.environ.get("NTFY_TOPIC") or "arb_erscop_83041"
 MIN_EDGE        = 0.04
 POLY_FEE        = 0.02
 KALSHI_FEE      = 0.02
